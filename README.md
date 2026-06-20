@@ -6,259 +6,216 @@
 
 # Pipecat MCP Server
 
-Pipecat MCP Server gives your AI agents a voice using [Pipecat](https://github.com/pipecat-ai/pipecat). It should work with any [MCP](https://modelcontextprotocol.io/)-compatible client:
+Pipecat MCP Server 为你的 AI 助手（Claude Code / Codex CLI）赋予**语音交互能力**，基于 [Pipecat](https://github.com/pipecat-ai/pipecat) 实现。它兼容所有 [MCP](https://modelcontextprotocol.io/) 客户端。
 
-The Pipecat MCP Server exposes **voice-related** and **screen capture** tools to MCP-compatible clients, but **it does not itself provide microphone or speaker access**.
+**核心概念**：MCP Server 暴露语音和屏幕捕获工具给 AI 客户端，但它本身不提供麦克风和扬声器。音频输入输出由**独立的传输层**处理，默认使用 WebRTC，你可以通过浏览器连接到本地服务。
 
-Audio input/output is handled by a **separate audio/video transport**, such as:
+> AI 客户端（Claude Code、Codex）负责**控制对话**，不是音频设备。要听到、说出或看到，你需要通过音频传输层连接。
 
-- **Pipecat Playground** (local browser UI)
-- **Daily** (WebRTC room)
-- **Phone providers** (Twilio, Telnyx, etc.)
+## 架构流程
 
-> **MCP clients like Cursor, Claude Code, and Codex control the agent, but they are not audio devices.**
-> To hear, speak or see, you must connect via one of the audio transports.
+```
+你(浏览器) ──WebRTC──▶ Pipecat Agent (STT/TTS) ◀──MCP──▶ Claude Code / Codex CLI
+   ▲                        ▲                                ▲
+   │                        │                                │
+   音频                  语音工具                       AI 大脑
+ (听/说)           (listen/speak/start/stop)          (理解/决策)
+```
 
-<p align="center"><video src="https://github.com/user-attachments/assets/0ad14e37-2de7-46df-870a-167aa667df16" width="500" controls></video></p>
+## 环境要求
 
-## 🧭 Getting started
+- Python 3.10+
+- [uv](https://docs.astral.sh/uv/getting-started/installation/) 包管理器
+- MiMo API Key（STT + TTS 云端服务，中文识别效果好于本地 Whisper）
 
-### Prerequisites
+## 安装
 
-- Python 3.10 or later
-- [uv](https://docs.astral.sh/uv/getting-started/installation/) package manager
-
-By default, the voice agent uses local models (no API keys required): [Faster Whisper](https://github.com/SYSTRAN/faster-whisper) for speech-to-text and [Kokoro](https://github.com/hexgrad/kokoro) for text-to-speech. The Whisper models are approximately 1.5 GB and are downloaded automatically on the first connection, so the initial startup may take a moment.
-
-### Installation
+### 方式一：从 PyPI 安装
 
 ```bash
 uv tool install pipecat-ai-mcp-server
 ```
 
-This will install the `pipecat-mcp-server` tool.
-
-If you want to use different services or modify the Pipecat pipeline somehow, you will need to clone the repository:
+### 方式二：克隆仓库本地安装
 
 ```bash
-git clone https://github.com/pipecat-ai/pipecat-mcp-server.git
+git clone https://github.com/xx5921/pipecat-mcp-server.git
+cd pipecat-mcp-server
+uv tool install -e .
 ```
 
-and install your local version with:
+### 配置环境变量
+
+在项目目录创建 `.env` 文件：
 
 ```bash
-uv tool install -e /path/to/repo/pipecat-mcp-server
+# MiMo API Key（必填，用于语音识别和合成）
+MIMO_API_KEY=你的MiMo_API_Key
+
+# WebRTC Runner 配置（可选，以下为默认值）
+PIPECAT_RUNNER_HOST=localhost
+PIPECAT_RUNNER_PORT=7860
+PIPECAT_RUNNER_TRANSPORT=webrtc
 ```
 
-## Running the server
-
-Start the server:
+## 启动服务
 
 ```bash
 pipecat-mcp-server
 ```
 
-This will make the Pipecat MCP Server available at `http://localhost:9090/mcp`.
+服务启动后：
+- MCP Server 运行在 `http://localhost:9090/mcp`
+- Pipecat Runner（WebRTC）运行在 `http://localhost:7860`
 
-## Auto-approving permissions
+---
 
-For hands-free voice conversations, you will need to auto-approve tool permissions. Otherwise, your agent will prompt for confirmation, which interrupts the conversation flow.
+## 连接 Claude Code
 
-> ⚠️ **Warning**: Enabling broad permissions is at your own risk.
-
-## Installing the talk skill (recommended)
-
-The [talk skill](https://github.com/pipecat-ai/skills/blob/main/skills/talk/SKILL.md) provides a better voice conversation experience. It asks for verbal confirmation before making changes to files, adding a layer of safety when using broad permissions.
-
-If you're using Claude Code, install the marketplace and plugin:
-
-```
-/plugin marketplace add pipecat-ai/skills
-/plugin install pipecat-mcp-server@pipecat-skills
-```
-
-Alternatively, just tell your agent something like `Let's have a voice conversation`. In this case, the agent won't ask for verbal confirmation before making changes.
-
-## 🖥️ Screen Capture & Analysis
-
-Screen capture lets you stream your screen (or a specific window) to your configured transport, and ask the agent to help with what it sees.
-
-For example:
-- *"capture my browser window"* — starts streaming that window
-- *"what's causing this error?"* — the agent analyzes the screen and helps debug
-- *"how does this UI look?"* — get feedback on your design
-
-**Supported platforms:**
-
-- **macOS** — uses ScreenCaptureKit for true window-level capture (not affected by overlapping windows)
-- **Linux (X11)** — uses Xlib for window and full-screen capture
-
-## 💻 MCP Client: Claude Code
-
-### Adding the MCP server
-
-Register the MCP server:
+### 步骤 1：添加 MCP Server
 
 ```bash
 claude mcp add pipecat --transport http http://localhost:9090/mcp --scope user
 ```
 
-Scope options:
-- `local`: Stored in `~/.claude.json`, applies only to your project
-- `user`: Stored in `~/.claude.json`, applies to all projects
-- `project`: Stored in `.mcp.json` in your project directory
+Scope 选项：
+- `local`：仅当前项目生效
+- `user`：所有项目生效
+- `project`：存储在项目的 `.mcp.json` 中
 
-### Auto-approving permissions
+### 步骤 2：配置权限自动批准
 
-Create `.claude/settings.local.json` in your project directory:
+创建 `.claude/settings.local.json`：
 
 ```json
 {
   "permissions": {
     "allow": [
-      "Bash",
-      "Read",
-      "Edit",
-      "Write",
-      "WebFetch",
-      "WebSearch",
-      "mcp__pipecat__*"
+      "mcp__pipecat__start",
+      "mcp__pipecat__listen",
+      "mcp__pipecat__speak",
+      "mcp__pipecat__stop",
+      "mcp__pipecat__list_windows",
+      "mcp__pipecat__screen_capture",
+      "mcp__pipecat__capture_screenshot"
     ]
   }
 }
 ```
 
-This grants permissions for bash commands, file operations, web fetching and searching, and all Pipecat MCP tools without prompting. See [available tools](https://code.claude.com/docs/en/settings#tools-available-to-claude) if you need to grant more permissions.
+### 步骤 3：启动语音对话
 
-### Starting a voice conversation
+1. 确保 `pipecat-mcp-server` 已启动
+2. 在浏览器打开 `http://localhost:7860`，点击连接（这是你的麦克风和扬声器）
+3. 在 Claude Code 中说：**"开始语音对话"** 或直接说你想做的事
 
-1. Install the talk skill (see above).
-2. Start the Pipecat MCP Server.
-3. Connect to an audio transport (see **🗣️ Connecting to the voice agent** below).
-4. Run `/talk`.
+Claude 会自动调用以下流程：
+1. `start()` → 启动 Pipecat 语音代理
+2. `listen()` → 等待你说话，返回转录文字
+3. Claude 思考并生成回复
+4. `speak(text)` → TTS 播报回复
+5. 循环 listen/speak 直到你说结束
+6. `stop()` → 关闭语音通道
 
-## 💻 MCP Client: Cursor
+---
 
-### Adding the MCP server
+## 连接 Codex CLI
 
-Register the MCP server by editing `~/.cursor/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "pipecat": {
-      "url": "http://localhost:9090/mcp"
-    }
-  }
-}
-```
-
-### Auto-approving permissions
-
-Go to the `Auto-Run` agent settings and configure it to `Run Everything`.
-
-### Starting a voice conversation
-
-1. Install the talk skill into `.claude/skills/talk/SKILL.md` (Cursor supports the Claude skills location).
-2. Start the Pipecat MCP Server.
-3. Connect to an audio transport (see **🗣️ Connecting to the voice agent** below).
-4. In a **new Cursor agent**, run `/talk`.
-
-## 💻 MCP Client: OpenAI Codex
-
-### Adding the MCP server
-
-Register the MCP server:
+### 步骤 1：添加 MCP Server
 
 ```bash
 codex mcp add pipecat --url http://localhost:9090/mcp
 ```
 
-### Auto-approving permissions
+### 步骤 2：配置信任级别
 
-If you start `codex` inside a version controlled project, you will be asked if you allow Codex to work on the folder without approval. Say `Yes`, which adds the following to `~/.codex/config.toml`.
+在 Codex 中进入你的项目目录，Codex 会询问是否信任该目录。选择 `Yes`，这会在 `~/.codex/config.toml` 中添加：
 
 ```toml
 [projects."/path/to/your/project"]
 trust_level = "trusted"
 ```
 
-### Starting a voice conversation
+### 步骤 3：启动语音对话
 
-1. Install the talk skill into `.codex/skills/talk/SKILL.md`.
-2. Start the Pipecat MCP Server.
-3. Connect to an audio transport (see **🗣️ Connecting to the voice agent** below).
-4. Run `$talk`.
+1. 确保 `pipecat-mcp-server` 已启动
+2. 在浏览器打开 `http://localhost:7860`，点击连接
+3. 在 Codex 中输入 `/talk` 或说 "开始语音对话"
 
-## 🗣️ Connecting to the voice agent
+---
 
-Once the voice agent starts, you can connect using different methods depending on how the server is configured.
+## 屏幕捕获与分析
 
-### Pipecat Playground (default)
+你可以把屏幕（或某个窗口）共享给 AI 助手，让它帮你分析看到的内容。
 
-When no arguments are specified to the `pipecat-mcp-server` command, the server uses Pipecat's local playground. Connect by opening http://localhost:7860 in your browser.
+**可用工具：**
+- `list_windows()` — 列出所有可捕获的窗口
+- `screen_capture(window_id)` — 开始捕获指定窗口（不传则捕获全屏）
+- `capture_screenshot()` — 截取当前画面并保存为图片
 
-You can also run an ngrok tunnel that you can connect to remotely:
+**使用示例：**
+- "列出我打开的窗口" → 返回窗口列表
+- "捕获我的浏览器窗口" → 开始流式传输该窗口
+- "这个报错是什么原因？" → AI 分析你的屏幕画面
+- "这个 UI 设计怎么样？" → AI 给你反馈
 
+**支持平台：**
+- **macOS** — ScreenCaptureKit，支持窗口级捕获
+- **Linux (X11)** — Xlib 窗口和全屏捕获
+- **Windows** — 全屏捕获
+
+---
+
+## 自定义服务
+
+### 切换 STT / TTS
+
+编辑 `agent.py` 中的 `_create_stt_service()` 和 `_create_tts_service()` 方法：
+
+```python
+# 默认使用 MiMo 云端服务（中文识别效果好）
+def _create_stt_service(self):
+    return MiMoSTTService(
+        api_key=os.environ.get("MIMO_API_KEY"),
+        language="zh",
+    )
+
+def _create_tts_service(self):
+    return MiMoTTSService(
+        api_key=os.environ.get("MIMO_API_KEY"),
+        voice="mimo_default",
+        language="zh",
+    )
 ```
-ngrok http --url=your-proxy.ngrok.app 7860
-```
 
-### Daily Prebuilt
+### 切换传输层
 
-You can also use [Daily](https://daily.co) and access your agent through a Daily room, which is convenient because you can then access from anywhere without tunnels.
-
-First, install the server with the Daily dependency:
+默认 WebRTC。如需使用 Daily 房间，在 `.env` 中设置：
 
 ```bash
-uv tool install pipecat-ai-mcp-server[daily]
+PIPECAT_RUNNER_TRANSPORT=daily
+DAILY_API_KEY=你的Daily_API_Key
+DAILY_ROOM_URL=你的Daily房间地址
 ```
 
-Then, set the `DAILY_API_KEY` environment variable to your Daily API key and `DAILY_ROOM_URL` to your desired Daily room URL and pass the `-d` argument to `pipecat-mcp-server`.
+---
 
-```bash
-export DAILY_API_KEY=your-daily-api-key
-export DAILY_ROOM_URL=your-daily-room
+## 常见问题
 
-pipecat-mcp-server -d
-```
+**Q: 说话后听到两次回复？**
+A: Pipeline 中不要放置 LLM 服务。本项目的架构中，AI 客户端（Claude/Codex）是"大脑"，Pipeline 只需要 STT + TTS。
 
-Connect by opening your Daily room URL (e.g., `https://yourdomain.daily.co/room`) in your browser. Daily Prebuilt provides a ready-to-use video/audio interface.
+**Q: 浏览器界面上看不到 AI 的文字回复？**
+A: TTS 会消费 `LLMTextFrame` 并输出音频帧，文字无法到达 UI。`agent.py` 已修复此问题：`speak()` 会同时推送文字到 `assistant_aggregator` 用于 UI 显示。
 
-### Phone call
+**Q: 如何修改 TTS 音色？**
+A: 可选音色：`mimo_default`、`冰糖`、`茉莉`、`苏打`、`白桦`、`Mia`、`Chloe`、`Milo`、`Dean`。在 `agent.py` 的 `_create_tts_service()` 中修改 `voice` 参数即可。
 
-To connect via phone call, pass `-t <provider> -x <your-proxy>` where `<provider>` is one of `twilio`, `telnyx`, `exotel`, or `plivo`, and `<your-proxy>` is your ngrok tunnel domain (e.g., `your-proxy.ngrok.app`).
+---
 
-First, start your ngrok tunnel:
+## 更多资源
 
-```bash
-ngrok http --url=your-proxy.ngrok.app 7860
-```
-
-Then, run the Pipecat MCP server with your ngrok URL and the required environment variables for your chosen telephony provider.
-
-| Provider | Environment variables                     |
-|----------|-------------------------------------------|
-| Twilio   | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` |
-| Telnyx   | `TELNYX_API_KEY`                          |
-| Exotel   | `EXOTEL_API_KEY`, `EXOTEL_API_TOKEN`      |
-| Plivo    | `PLIVO_AUTH_ID`, `PLIVO_AUTH_TOKEN`       |
-
-#### Twilio
-
-```bash
-export TWILIO_ACCOUNT_SID=your-twilio-account-sid
-export TWILIO_AUTH_TOKEN=your-twilio-auth-token
-
-pipecat-mcp-server -t twilio -x your-proxy.ngrok.app
-```
-
-Configure your provider's phone number to point to your ngrok URL, then call your number to connect.
-
-## 📚 What's Next?
-
-- **Customize services**: Edit `agent.py` to use different STT/TTS providers
-- **Change transport**: Configure for Twilio, WebRTC, or other transports
-- **Add to your project**: Use this as a template for voice-enabled MCP tools
-- **Learn more**: Check out [Pipecat's docs](https://docs.pipecat.ai/) for advanced features
-- **Get help**: Join [Pipecat's Discord](https://discord.gg/pipecat) to connect with the community
+- [Pipecat 文档](https://docs.pipecat.ai/)
+- [Pipecat Discord](https://discord.gg/pipecat)
+- [MCP 协议](https://modelcontextprotocol.io/)
+- [Claude Code 文档](https://docs.anthropic.com/en/docs/claude-code)
