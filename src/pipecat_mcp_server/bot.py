@@ -68,6 +68,16 @@ async def bot(runner_args: RunnerArguments):
                 path = await agent.capture_screenshot()
                 await send_response({"path": path})
                 logger.debug(f"Command '{cmd}' finished")
+            elif cmd == "set_wake_word":
+                agent.set_wake_word(request.get("word", ""))
+                await send_response(
+                    {"ok": True, "words": agent._wake_words, "awake": agent._awake}
+                )
+                logger.debug(f"Command '{cmd}' finished")
+            elif cmd == "get_wake_word":
+                result = agent.get_wake_word()
+                await send_response(result)
+                logger.debug(f"Command '{cmd}' finished")
             elif cmd == "stop":
                 await agent.stop()
                 await send_response({"ok": True})

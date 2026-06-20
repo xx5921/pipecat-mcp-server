@@ -13,6 +13,8 @@ services, allowing an MCP client to listen for user speech and speak responses.
 
 import asyncio
 import os
+import random
+import re
 from typing import Any, Optional
 
 from dotenv import load_dotenv
@@ -63,6 +65,34 @@ from pipecat_mcp_server.processors.vision import VisionProcessor
 
 load_dotenv(override=True)
 
+GREETINGS = [
+    "请吩咐。",
+    "我在呢，请说。",
+    "你好，有什么可以帮你的？",
+    "说吧，我听着呢。",
+    "嗯，在呢。",
+]
+
+
+_PUNCT_RE = re.compile(r"[]\s，。！？、；：""''（）《》【】,.!?;:\"'(){}[]+")
+
+def _normalize(text: str) -> str:
+    """Remove punctuation and whitespace for wake word matching."""
+    return _PUNCT_RE.sub("", text)
+
+
+def _find_wake_word(text: str, wake_words: list[str]) -> str | None:
+    """Return the first wake word found in text, or None.
+
+    Punctuation and whitespace in the transcribed text are ignored
+    during matching.
+    """
+    normalized = _normalize(text)
+    for w in wake_words:
+        if w in normalized:
+            return w
+    return None
+
 
 class PipecatMCPAgent:
     """Pipecat MCP Agent that exposes voice I/O tools.
@@ -95,6 +125,13 @@ class PipecatMCPAgent:
         self._pipeline_runner: Optional[PipelineRunner] = None
         self._assistant_aggregator: Optional[Any] = None
         self._user_speech_queue: asyncio.Queue[Any] = asyncio.Queue()
+
+        # Wake word state
+        raw = os.environ.get("PIPECAT_WAKE_WORD", "")
+        self._wake_words: list[str] = [w.strip() for w in raw.split(",") if w.strip()]
+        self._awake: bool = (len(self._wake_words) == 0)  # no wake word => always awake
+        self._awake_timeout_secs: float = float(os.environ.get("PIPECAT_WAKE_TIMEOUT", "30"))
+        self._awake_timeout_task: Optional[asyncio.Task] = None
 
         self._started = False
 
@@ -182,8 +219,35 @@ class PipecatMCPAgent:
 
         @user_aggregator.event_handler("on_user_turn_stopped")
         async def on_user_turn_stopped(aggregator, strategy, message: UserTurnStoppedMessage):
-            if message.content:
-                await self._user_speech_queue.put(message.content)
+            if not message.content:
+                return
+
+            text = message.content
+
+            if not self._awake and self._wake_words:
+                # Sleeping: check for wake word
+                matched = _find_wake_word(text, self._wake_words)
+                if matched:
+                    logger.info(f"Wake word '{matched}' detected in: '{text}'")
+                    self._awake = True
+                    self._schedule_awake_timeout()
+                    remaining = _normalize(text).replace(matched, "", 1).strip()
+                    if remaining:
+                        # Wake word + question: forward question, skip greeting
+                        await self._user_speech_queue.put(remaining)
+                    else:
+                        # Wake word alone: speak a random greeting
+                        greeting = random.choice(GREETINGS)
+                        logger.info(f"Speaking wake greeting: '{greeting}'")
+                        await self.speak(greeting)
+                else:
+                    logger.debug(f"Ignoring speech while asleep: '{text}'")
+            else:
+                # Awake: process speech normally
+                await self._user_speech_queue.put(text)
+                if self._wake_words:
+                    self._cancel_awake_timeout()
+                    self._schedule_awake_timeout()
 
         # Start pipeline in background
         self._task = asyncio.create_task(self._pipeline_runner.run(self._pipeline_task))
@@ -201,6 +265,10 @@ class PipecatMCPAgent:
             return
 
         logger.info("Stopping Pipecat MCP agent...")
+
+        if self._awake_timeout_task:
+            self._awake_timeout_task.cancel()
+            self._awake_timeout_task = None
 
         if self._pipeline_task:
             await self._pipeline_task.queue_frame(EndFrame())
@@ -280,6 +348,12 @@ class PipecatMCPAgent:
             ]
         )
 
+        # Reset awake timeout so the user has a full window to respond
+        # after the bot finishes speaking, not from their last utterance.
+        if self._awake and self._wake_words:
+            self._cancel_awake_timeout()
+            self._schedule_awake_timeout()
+
     async def list_windows(self) -> list[dict]:
         """List all open windows via the screen capture backend.
 
@@ -329,6 +403,55 @@ class PipecatMCPAgent:
             voice="mimo_default",
             language="zh",
         )
+
+    def set_wake_word(self, word: str) -> None:
+        """Set the wake word(s) and enter sleep mode.
+
+        Args:
+            word: Comma-separated wake word phrases (e.g. "小林小林,小琳小琳").
+                Empty string disables wake word.
+        """
+        word = word.strip()
+        self._wake_words = [w.strip() for w in word.split(",") if w.strip()]
+        if self._wake_words:
+            self._awake = False
+            logger.info(f"Wake words set to {self._wake_words}. Agent is now asleep.")
+        else:
+            self._awake = True
+            self._cancel_awake_timeout()
+            logger.info("Wake words cleared. Agent is always awake.")
+
+    def get_wake_word(self) -> dict:
+        """Get the current wake word configuration.
+
+        Returns:
+            A dict with 'words' and 'awake' keys.
+        """
+        return {
+            "words": self._wake_words,
+            "awake": self._awake,
+        }
+
+    def _schedule_awake_timeout(self):
+        """Schedule a task to return the agent to sleep after the timeout."""
+        if self._awake_timeout_task:
+            self._awake_timeout_task.cancel()
+        self._awake_timeout_task = asyncio.create_task(self._awake_timeout())
+
+    def _cancel_awake_timeout(self):
+        """Cancel the pending awake timeout task."""
+        if self._awake_timeout_task:
+            self._awake_timeout_task.cancel()
+            self._awake_timeout_task = None
+
+    async def _awake_timeout(self):
+        """Wait for the timeout, then return agent to sleep."""
+        try:
+            await asyncio.sleep(self._awake_timeout_secs)
+            logger.info(f"Wake timeout ({self._awake_timeout_secs}s) expired, returning to sleep")
+            self._awake = False
+        except asyncio.CancelledError:
+            pass  # Timeout was replaced by a new utterance
 
 
 async def create_agent(runner_args: RunnerArguments) -> PipecatMCPAgent:

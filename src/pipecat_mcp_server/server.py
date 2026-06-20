@@ -112,6 +112,34 @@ async def capture_screenshot() -> str:
 
 
 @mcp.tool()
+async def set_wake_word(word: str) -> dict:
+    """Set the wake word for the voice agent.
+
+    Once set, the agent will ignore all speech until the wake word is spoken.
+    The wake word is detected in the transcribed text after STT processing.
+    Pass an empty string to disable the wake word and keep the agent always
+    awake.
+
+    Args:
+        word: The wake word phrase (e.g., "小林小林"). Empty string to disable.
+
+    Returns a dict with the current word and awake status.
+    """
+    result = await send_command("set_wake_word", word=word)
+    return result
+
+
+@mcp.tool()
+async def get_wake_word() -> dict:
+    """Get the current wake word configuration.
+
+    Returns a dict with 'word' and 'awake' keys.
+    """
+    result = await send_command("get_wake_word")
+    return result
+
+
+@mcp.tool()
 async def stop() -> bool:
     """Stop the voice pipeline and clean up resources.
 
