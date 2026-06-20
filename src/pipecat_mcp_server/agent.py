@@ -46,7 +46,6 @@ from pipecat.runner.types import (
 from pipecat.runner.utils import create_transport
 from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
-from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import (
@@ -54,24 +53,12 @@ from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import (
 )
 from pipecat.turns.user_turn_strategies import UserTurnStrategies
 
-from pipecat.processors.aggregators.llm_text_processor import LLMTextProcessor
-from pipecat.utils.text.pattern_pair_aggregator import MatchAction, PatternPairAggregator
-
 from pipecat_mcp_server.processors.mimo_stt import MiMoSTTService
 from pipecat_mcp_server.processors.mimo_tts import MiMoTTSService
 from pipecat_mcp_server.processors.screen_capture import ScreenCaptureProcessor
 from pipecat_mcp_server.processors.vision import VisionProcessor
 
 load_dotenv(override=True)
-
-# LLM system prompt — instructs the LLM to wrap special text segments
-# so the LLMTextProcessor can handle them for better TTS output.
-LLM_SYSTEM_PROMPT = (
-    "你是一个友好的 AI 助手。"
-    "所有代码片段应包裹在 <code></code> 块中。"
-    "所有信用卡号应包裹在 <card></card> 块中。"
-    "所有 URL 应包裹在 <link></link> 块中。"
-)
 
 
 class PipecatMCPAgent:
@@ -140,51 +127,18 @@ class PipecatMCPAgent:
             ),
         )
 
-        # LLM service (Xiaomi MiMo via OpenAI-compatible API)
-        llm = OpenAILLMService(
-            api_key=os.environ["MIMO_API_KEY"],
-            base_url="https://token-plan-cn.xiaomimimo.com/v1",
-            settings=OpenAILLMService.Settings(
-                model="mimo-v2.5",
-                system_instruction=LLM_SYSTEM_PROMPT,
-            ),
-        )
-
-        # LLMTextProcessor with PatternPairAggregator for handling special text
-        # segments (code, credit card numbers, URLs) in TTS output.
-        llm_text_aggregator = PatternPairAggregator()
-        llm_text_aggregator.add_pattern(
-            type="code",
-            start_pattern="<code>",
-            end_pattern="</code>",
-            action=MatchAction.AGGREGATE,
-        )
-        llm_text_aggregator.add_pattern(
-            type="credit_card",
-            start_pattern="<card>",
-            end_pattern="</card>",
-            action=MatchAction.AGGREGATE,
-        )
-        llm_text_aggregator.add_pattern(
-            type="link",
-            start_pattern="<link>",
-            end_pattern="</link>",
-            action=MatchAction.AGGREGATE,
-        )
-        llm_text_processor = LLMTextProcessor(text_aggregator=llm_text_aggregator)
-
         self._screen_capture = ScreenCaptureProcessor()
         self._vision = VisionProcessor()
 
         # Create pipeline with parallel branches:
-        # - Main branch: audio processing (STT → aggregator → LLM → LLMTextProcessor → TTS)
+        # - Main branch: audio processing (STT → aggregator → TTS)
         # - Vision branch: saves frames to disk on demand
         pipeline = Pipeline(
             [
                 self._transport.input(),
                 self._screen_capture,
                 ParallelPipeline(
-                    [stt, user_aggregator, llm, llm_text_processor, tts],
+                    [stt, user_aggregator, tts],
                     [self._vision],
                 ),
                 # Assistant aggregator before the transport, because we want to
