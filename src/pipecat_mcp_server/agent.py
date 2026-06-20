@@ -26,7 +26,10 @@ from pipecat.frames.frames import (
     LLMFullResponseEndFrame,
     LLMFullResponseStartFrame,
     LLMTextFrame,
+    OutputTransportMessageUrgentFrame,
 )
+
+import pipecat.processors.frameworks.rtvi.models as RTVI
 from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -254,12 +257,19 @@ class PipecatMCPAgent:
         if not self._pipeline_task:
             raise RuntimeError("Pipecat MCP Agent not initialized")
 
-        # Push text directly to assistant_aggregator so it shows in the
-        # WebRTC client UI. The pipeline path (below) only produces audio
-        # because TTS consumes LLMTextFrame and outputs TTSAudioRawFrame.
-        await self._assistant_aggregator.push_frame(LLMFullResponseStartFrame())
-        await self._assistant_aggregator.push_frame(LLMTextFrame(text=text))
-        await self._assistant_aggregator.push_frame(LLMFullResponseEndFrame())
+        # Push text directly to the WebRTC data channel via transport message,
+        # so it appears in the client UI. The pipeline path (below) only produces
+        # audio because TTS consumes LLMTextFrame and outputs TTSAudioRawFrame.
+        bot_output = RTVI.BotOutputMessage(
+            data=RTVI.BotOutputMessageData(
+                text=text,
+                aggregated_by="sentence",
+                spoken=True,
+            )
+        )
+        await self._transport.output().queue_frame(
+            OutputTransportMessageUrgentFrame(message=bot_output.model_dump())
+        )
 
         # Pipeline path: TTS converts text to audio for the user to hear
         await self._pipeline_task.queue_frames(
