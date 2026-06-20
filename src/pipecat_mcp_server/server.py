@@ -31,16 +31,21 @@ mcp = FastMCP(name="pipecat-mcp-server", host="localhost", port=9090)
 
 
 @mcp.tool()
-async def start() -> bool:
+async def start() -> str:
     """Start a new Pipecat Voice Agent.
 
     Once the voice agent has started you can continuously use the listen() and
     speak() tools to talk to the user.
 
-    Returns true if the agent was started successfully, false otherwise.
+    Returns the WebRTC runner URL. The user should open this URL in a browser
+    to connect their microphone and speaker.
     """
+    import os
+
     start_pipecat_process()
-    return True
+    host = os.environ.get("PIPECAT_RUNNER_HOST", "localhost")
+    port = os.environ.get("PIPECAT_RUNNER_PORT", "7860")
+    return f"Voice agent started. Open http://{host}:{port} in your browser to connect."
 
 
 @mcp.tool()

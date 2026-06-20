@@ -106,6 +106,7 @@ def run_pipecat_process(cmd_queue: multiprocessing.Queue, response_queue: multip
     global _cmd_queue, _response_queue
 
     import os
+    import sys
 
     _cmd_queue = cmd_queue
     _response_queue = response_queue
@@ -113,6 +114,19 @@ def run_pipecat_process(cmd_queue: multiprocessing.Queue, response_queue: multip
     # Change to package directory so pipecat_main() can find bot.py
     package_dir = os.path.dirname(__file__)
     os.chdir(package_dir)
+
+    # Set up transport args for the Pipecat runner. Default to WebRTC transport
+    # so the user can connect by opening http://localhost:7860 in a browser.
+    _runner_host = os.environ.get("PIPECAT_RUNNER_HOST", "localhost")
+    _runner_port = os.environ.get("PIPECAT_RUNNER_PORT", "7860")
+    _runner_transport = os.environ.get("PIPECAT_RUNNER_TRANSPORT", "webrtc")
+
+    sys.argv = [
+        "pipecat-runner",
+        "-t", _runner_transport,
+        "--host", _runner_host,
+        "--port", _runner_port,
+    ]
 
     # Import and run the pipecat main (which will call our bot() function)
     from pipecat.runner.run import main as pipecat_main
