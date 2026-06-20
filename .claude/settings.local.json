@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "mcp__pipecat__start",
-      "mcp__pipecat__speak"
+      "mcp__pipecat__speak",
+      "Bash(curl -s http://localhost:9090/health)",
+      "Bash(curl *)",
+      "mcp__pipecat__listen",
+      "mcp__pipecat__start",
+      "mcp__pipecat__listen",
+      "mcp__pipecat__speak",
+      "mcp__pipecat__stop",
+      "mcp__pipecat__list_windows",
+      "mcp__pipecat__screen_capture",
+      "mcp__pipecat__capture_screenshot"
     ]
   }
 }

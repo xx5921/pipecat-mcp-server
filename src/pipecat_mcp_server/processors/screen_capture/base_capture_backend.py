@@ -80,7 +80,12 @@ def get_capture_backend() -> BaseCaptureBackend:
 
         return LinuxX11CaptureBackend()
 
+    if sys.platform == "win32":
+        from .windows_capture_backend import WindowsCaptureBackend
+
+        return WindowsCaptureBackend()
+
     raise RuntimeError(
         f"Screen capture is not supported on platform '{sys.platform}'. "
-        "Currently only macOS and Linux (X11) are supported."
+        "Currently only macOS, Linux (X11), and Windows (stub) are supported."
     )
