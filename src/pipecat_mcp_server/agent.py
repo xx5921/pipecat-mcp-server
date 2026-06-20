@@ -129,7 +129,7 @@ class PipecatMCPAgent:
         # Wake word state
         raw = os.environ.get("PIPECAT_WAKE_WORD", "")
         self._wake_words: list[str] = [w.strip() for w in raw.split(",") if w.strip()]
-        self._awake: bool = (len(self._wake_words) == 0)  # no wake word => always awake
+        self._awake: bool = True  # start awake so initial conversation flows naturally
         self._awake_timeout_secs: float = float(os.environ.get("PIPECAT_WAKE_TIMEOUT", "30"))
         self._awake_timeout_task: Optional[asyncio.Task] = None
 
@@ -251,6 +251,11 @@ class PipecatMCPAgent:
 
         # Start pipeline in background
         self._task = asyncio.create_task(self._pipeline_runner.run(self._pipeline_task))
+
+        # Start awake timeout so the initial greeting/conversation flows
+        # naturally; after inactivity the agent returns to sleep.
+        if self._wake_words:
+            self._schedule_awake_timeout()
 
         self._started = True
         logger.info("Pipecat MCP Agent started!")
