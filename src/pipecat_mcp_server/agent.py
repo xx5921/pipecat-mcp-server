@@ -90,6 +90,7 @@ class PipecatMCPAgent:
         self._task: Optional[asyncio.Task] = None
         self._pipeline_task: Optional[PipelineTask] = None
         self._pipeline_runner: Optional[PipelineRunner] = None
+        self._assistant_aggregator: Optional[Any] = None
         self._user_speech_queue: asyncio.Queue[Any] = asyncio.Queue()
 
         self._started = False
@@ -126,6 +127,11 @@ class PipecatMCPAgent:
                 vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
             ),
         )
+
+        # Store assistant aggregator so speak() can push text directly to it
+        # for display in the WebRTC client UI (TTS consumes text frames in the
+        # pipeline, so they never reach the assistant aggregator downstream).
+        self._assistant_aggregator = assistant_aggregator
 
         self._screen_capture = ScreenCaptureProcessor()
         self._vision = VisionProcessor()
@@ -248,6 +254,14 @@ class PipecatMCPAgent:
         if not self._pipeline_task:
             raise RuntimeError("Pipecat MCP Agent not initialized")
 
+        # Push text directly to assistant_aggregator so it shows in the
+        # WebRTC client UI. The pipeline path (below) only produces audio
+        # because TTS consumes LLMTextFrame and outputs TTSAudioRawFrame.
+        await self._assistant_aggregator.push_frame(LLMFullResponseStartFrame())
+        await self._assistant_aggregator.push_frame(LLMTextFrame(text=text))
+        await self._assistant_aggregator.push_frame(LLMFullResponseEndFrame())
+
+        # Pipeline path: TTS converts text to audio for the user to hear
         await self._pipeline_task.queue_frames(
             [
                 LLMFullResponseStartFrame(),
