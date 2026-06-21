@@ -17,6 +17,7 @@ import random
 import re
 from typing import Any, Optional
 
+import pipecat.processors.frameworks.rtvi.models as RTVI
 from dotenv import load_dotenv
 from loguru import logger
 from pipecat.audio.filters.rnnoise_filter import RNNoiseFilter
@@ -30,8 +31,6 @@ from pipecat.frames.frames import (
     LLMTextFrame,
     OutputTransportMessageUrgentFrame,
 )
-
-import pipecat.processors.frameworks.rtvi.models as RTVI
 from pipecat.pipeline.parallel_pipeline import ParallelPipeline
 from pipecat.pipeline.pipeline import Pipeline
 from pipecat.pipeline.runner import PipelineRunner
@@ -49,8 +48,11 @@ from pipecat.runner.types import (
     WebSocketRunnerArguments,
 )
 from pipecat.runner.utils import create_transport
+from pipecat.services.kokoro.tts import KokoroTTSService
 from pipecat.services.stt_service import STTService
 from pipecat.services.tts_service import TTSService
+from pipecat.services.whisper.stt import WhisperSTTService
+from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.websocket.fastapi import FastAPIWebsocketParams
 from pipecat.turns.user_stop.turn_analyzer_user_turn_stop_strategy import (
@@ -73,6 +75,15 @@ GREETINGS = [
     "嗯，在呢。",
 ]
 
+DEFAULT_STT_PROVIDER = "mimo"
+DEFAULT_STT_MODEL = "medium"
+DEFAULT_TTS_PROVIDER = "mimo"
+DEFAULT_MIMO_TTS_VOICE = "mimo_default"
+DEFAULT_KOKORO_TTS_VOICE = "af_heart"
+DEFAULT_PIPER_TTS_VOICE = "zh_CN-huayan-medium"
+DEFAULT_MIMO_TTS_LANGUAGE = "zh"
+DEFAULT_KOKORO_TTS_LANGUAGE = "en"
+
 
 _PUNCT_RE = re.compile(r"[]\s，。！？、；：""''（）《》【】,.!?;:\"'(){}[]+")
 
@@ -92,6 +103,20 @@ def _find_wake_word(text: str, wake_words: list[str]) -> str | None:
         if w in normalized:
             return w
     return None
+
+
+def _resolve_language(value: str) -> Language:
+    """将环境变量中的语言代码转换为 Pipecat 语言枚举.
+
+    Args:
+        value: 环境变量中的语言代码，例如 zh、en、ja。
+
+    Returns:
+        Pipecat 的 Language 枚举值。
+
+    """
+    language = value.strip().lower().replace("-", "_")
+    return Language(language)
 
 
 class PipecatMCPAgent:
@@ -396,18 +421,68 @@ class PipecatMCPAgent:
         self._vision.request_capture()
         return await self._vision.get_result()
 
-    def _create_stt_service(self) -> STTService:
-        return MiMoSTTService(
-            api_key=os.environ.get("MIMO_API_KEY"),
-            language="zh",
-        )
+    @staticmethod
+    def _create_stt_service() -> STTService:
+        """根据环境变量创建语音识别服务.
 
-    def _create_tts_service(self) -> TTSService:
-        return MiMoTTSService(
-            api_key=os.environ.get("MIMO_API_KEY"),
-            voice="mimo_default",
-            language="zh",
-        )
+        Returns:
+            配置完成的 STT 服务实例。
+
+        """
+        provider = os.environ.get("PIPECAT_STT_PROVIDER", DEFAULT_STT_PROVIDER).strip().lower()
+        if provider == "mimo":
+            return MiMoSTTService(
+                api_key=os.environ.get("MIMO_API_KEY"),
+                language="zh",
+            )
+
+        if provider == "whisper":
+            return WhisperSTTService(
+                settings=WhisperSTTService.Settings(
+                    model=os.environ.get("PIPECAT_STT_MODEL", DEFAULT_STT_MODEL),
+                    language=Language.ZH,
+                    no_speech_prob=float(os.environ.get("PIPECAT_STT_NO_SPEECH_PROB", "0.4")),
+                ),
+            )
+
+        raise ValueError(f"Unsupported STT provider: {provider}")
+
+    @staticmethod
+    def _create_tts_service() -> TTSService:
+        """根据环境变量创建语音合成服务.
+
+        Returns:
+            配置完成的 TTS 服务实例。
+
+        """
+        provider = os.environ.get("PIPECAT_TTS_PROVIDER", DEFAULT_TTS_PROVIDER).strip().lower()
+        if provider == "mimo":
+            return MiMoTTSService(
+                api_key=os.environ.get("MIMO_API_KEY"),
+                voice=os.environ.get("PIPECAT_TTS_VOICE", DEFAULT_MIMO_TTS_VOICE),
+                language=os.environ.get("PIPECAT_TTS_LANGUAGE", DEFAULT_MIMO_TTS_LANGUAGE),
+            )
+
+        if provider == "kokoro":
+            return KokoroTTSService(
+                settings=KokoroTTSService.Settings(
+                    voice=os.environ.get("PIPECAT_TTS_VOICE", DEFAULT_KOKORO_TTS_VOICE),
+                    language=_resolve_language(
+                        os.environ.get("PIPECAT_TTS_LANGUAGE", DEFAULT_KOKORO_TTS_LANGUAGE)
+                    ),
+                ),
+            )
+
+        if provider == "piper":
+            from pipecat.services.piper.tts import PiperTTSService
+
+            return PiperTTSService(
+                settings=PiperTTSService.Settings(
+                    voice=os.environ.get("PIPECAT_TTS_VOICE", DEFAULT_PIPER_TTS_VOICE),
+                ),
+            )
+
+        raise ValueError(f"Unsupported TTS provider: {provider}")
 
     def set_wake_word(self, word: str) -> None:
         """Set the wake word(s) and enter sleep mode.
@@ -415,6 +490,7 @@ class PipecatMCPAgent:
         Args:
             word: Comma-separated wake word phrases (e.g. "小林小林,小琳小琳").
                 Empty string disables wake word.
+
         """
         word = word.strip()
         self._wake_words = [w.strip() for w in word.split(",") if w.strip()]
@@ -431,6 +507,7 @@ class PipecatMCPAgent:
 
         Returns:
             A dict with 'words' and 'awake' keys.
+
         """
         return {
             "words": self._wake_words,

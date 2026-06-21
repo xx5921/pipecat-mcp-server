@@ -1,4 +1,4 @@
-<h1><div align="center">
+﻿<h1><div align="center">
  <img alt="Pipecat MCP Server" width="300px" height="auto" src="https://github.com/pipecat-ai/pipecat-mcp-server/raw/refs/heads/main/pipecat.png">
 </div></h1>
 
@@ -170,23 +170,31 @@ trust_level = "trusted"
 
 ### 切换 STT / TTS
 
-编辑 `agent.py` 中的 `_create_stt_service()` 和 `_create_tts_service()` 方法：
+在 `.env` 中通过环境变量切换语音识别和语音合成服务：
 
-```python
-# 默认使用 MiMo 云端服务（中文识别效果好）
-def _create_stt_service(self):
-    return MiMoSTTService(
-        api_key=os.environ.get("MIMO_API_KEY"),
-        language="zh",
-    )
+```bash
+# STT provider: mimo / whisper
+PIPECAT_STT_PROVIDER=whisper
+# Whisper model: tiny / base / small / medium / large-v3
+PIPECAT_STT_MODEL=medium
+PIPECAT_STT_NO_SPEECH_PROB=0.4
 
-def _create_tts_service(self):
-    return MiMoTTSService(
-        api_key=os.environ.get("MIMO_API_KEY"),
-        voice="mimo_default",
-        language="zh",
-    )
+# TTS provider: mimo / kokoro / piper
+PIPECAT_TTS_PROVIDER=piper
+# MiMo example: mimo_default / 冰糖 / 茉莉 / 苏打 / 白桦 / Mia / Chloe / Milo / Dean
+# Kokoro example: af_heart
+# Piper example: zh_CN-huayan-medium
+PIPECAT_TTS_VOICE=zh_CN-huayan-medium
+# Kokoro af_heart uses en; MiMo/Piper Chinese voices usually use zh.
+PIPECAT_TTS_LANGUAGE=zh
 ```
+
+- `mimo`：小米云端服务，中文识别和合成效果较好，需要 `MIMO_API_KEY`。
+- `whisper`：本地 Whisper 语音识别，免费，首次启动会自动下载模型。
+- `kokoro`：本地 Kokoro ONNX 语音合成，免费，首次启动会自动下载模型。
+- `piper`：本地 Piper 语音合成，免费，首次启动会自动下载指定音色模型。
+
+如果切换到 `PIPECAT_TTS_PROVIDER=kokoro` 且使用 `af_heart`，请把 `PIPECAT_TTS_LANGUAGE` 改成 `en`，否则 Kokoro 的 espeak 后端会报 `zh` 不支持。
 
 ### 切换传输层
 

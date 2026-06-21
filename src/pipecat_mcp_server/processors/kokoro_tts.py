@@ -139,13 +139,14 @@ class KokoroTTSService(TTSService):
         return True
 
     @traced_tts
-    async def run_tts(self, text: str) -> AsyncGenerator[Frame, None]:
+    async def run_tts(self, text: str, context_id: str) -> AsyncGenerator[Frame, None]:
         """Synthesize speech from text using kokoro-onnx.
 
         Uses the async streaming API to generate audio frames.
 
         Args:
             text: The text to synthesize.
+            context_id: Unique identifier for this TTS context.
 
         """
         logger.debug(f"{self}: Generating TTS [{text}]")
