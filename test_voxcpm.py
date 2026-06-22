@@ -22,7 +22,7 @@ try:
 
     # 3. 检查并保存音频文件
     if response.status_code == 200:
-        output_filename = "output.wav"
+        output_filename = "src/pipecat_mcp_server/voice/girl_voice.wav"
         with open(output_filename, "wb") as f:
             f.write(response.content)
         print(f"🎉 语音生成成功！音频文件已保存至当前目录下的: {output_filename}")

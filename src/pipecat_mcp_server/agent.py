@@ -12,9 +12,11 @@ services, allowing an MCP client to listen for user speech and speak responses.
 """
 
 import asyncio
+import base64
 import os
 import random
 import re
+from pathlib import Path
 from typing import Any, Optional
 
 import pipecat.processors.frameworks.rtvi.models as RTVI
@@ -64,6 +66,7 @@ from pipecat_mcp_server.processors.mimo_stt import MiMoSTTService
 from pipecat_mcp_server.processors.mimo_tts import MiMoTTSService
 from pipecat_mcp_server.processors.screen_capture import ScreenCaptureProcessor
 from pipecat_mcp_server.processors.vision import VisionProcessor
+from pipecat_mcp_server.processors.voxcpm_tts import VoxCPMTTSService
 
 load_dotenv(override=True)
 
@@ -81,6 +84,13 @@ DEFAULT_TTS_PROVIDER = "mimo"
 DEFAULT_MIMO_TTS_VOICE = "mimo_default"
 DEFAULT_KOKORO_TTS_VOICE = "af_heart"
 DEFAULT_PIPER_TTS_VOICE = "zh_CN-huayan-medium"
+DEFAULT_VOXCPM_TTS_URL = "http://localhost:8000"
+DEFAULT_VOXCPM_TTS_MODEL = "openbmb/VoxCPM2"
+DEFAULT_VOXCPM_TTS_VOICE = "default"
+DEFAULT_VOXCPM_TTS_SEED = 2028
+# 默认音色克隆参考音频（模块同级 voice/girl_voice.wav）
+DEFAULT_VOXCPM_REF_AUDIO = str(Path(__file__).parent / "voice" / "girl_voice.wav")
+DEFAULT_VOXCPM_REF_TEXT = "你好啊，今天是开心的一天"
 DEFAULT_MIMO_TTS_LANGUAGE = "zh"
 DEFAULT_KOKORO_TTS_LANGUAGE = "en"
 
@@ -117,6 +127,27 @@ def _resolve_language(value: str) -> Language:
     """
     language = value.strip().lower().replace("-", "_")
     return Language(language)
+
+
+def _load_audio_data_uri(path: str) -> str | None:
+    """读取本地音频文件并转换为 base64 data URI。
+
+    用于 VoxCPM 音色克隆（ref_audio）。返回结果可直接作为
+    OpenAI 兼容 `/v1/audio/speech` 请求体中的 `ref_audio` 字段值。
+
+    Args:
+        path: 本地音频文件路径，支持 .wav 等。
+
+    Returns:
+        形如 ``data:audio/wav;base64,<base64>`` 的字符串；若文件
+        不存在则返回 ``None``。
+
+    """
+    if not path or not os.path.exists(path):
+        raise FileNotFoundError(f"没有找到参考音频文件: {path}，请先放一个短音频在同目录下。")
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:audio/wav;base64,{b64}"
 
 
 class PipecatMCPAgent:
@@ -480,6 +511,15 @@ class PipecatMCPAgent:
                 settings=PiperTTSService.Settings(
                     voice=os.environ.get("PIPECAT_TTS_VOICE", DEFAULT_PIPER_TTS_VOICE),
                 ),
+            )
+
+        if provider == "voxcpm":
+            return VoxCPMTTSService(
+                base_url=os.environ.get("PIPECAT_VOXCPM_URL", DEFAULT_VOXCPM_TTS_URL),
+                model=DEFAULT_VOXCPM_TTS_MODEL,
+                voice=DEFAULT_VOXCPM_TTS_VOICE,
+                ref_audio=_load_audio_data_uri(DEFAULT_VOXCPM_REF_AUDIO),
+                ref_text=DEFAULT_VOXCPM_REF_TEXT,
             )
 
         raise ValueError(f"Unsupported TTS provider: {provider}")

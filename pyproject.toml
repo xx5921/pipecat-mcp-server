@@ -9,7 +9,7 @@ description = "Pipecat MCP server for your AI agents"
 license = "BSD-2-Clause"
 license-files = ["LICENSE"]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 keywords = ["pipecat", "mcp", "voice", "ai", "assistant", "speech"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -20,6 +20,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence"
 ]
 dependencies = [
+    "httpx>=0.27.0,<1",
     "kokoro-onnx>=0.5.0,<1",
     "loguru>=0.7.0,<1",
     "mcp>=1.0.0",
@@ -27,6 +28,7 @@ dependencies = [
     "pipecat-ai[cartesia,deepgram,local-smart-turn-v3,piper,rnnoise,runner,silero,webrtc,websocket]>=0.0.101",
     "pipecat-ai[mlx-whisper]>=0.0.100; sys_platform == 'darwin'",
     "pipecat-ai[whisper]>=0.0.100; sys_platform != 'darwin'",
+    "pydub>=0.25.1,<1",
     "pyobjc-framework-CoreMedia>=11.0; sys_platform == 'darwin'",
     "pyobjc-framework-Quartz>=11.0; sys_platform == 'darwin'",
     "pyobjc-framework-ScreenCaptureKit>=11.0; sys_platform == 'darwin'",

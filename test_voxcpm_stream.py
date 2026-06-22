@@ -23,7 +23,7 @@ payload = {
     "model": MODEL_NAME,
     "input": "原生风格的背景色不会跟随 QSS 主题，导致出现白色背景与主题不协调、遮挡文本的情况。",
     "voice": "default",
-    # "ref_audio": get_audio_b64("output.wav"),  # 👈 真正决定音色的核心参数,
+    # "ref_audio": get_audio_b64("girl_voice.wav"),  # 👈 真正决定音色的核心参数,
     # "ref_text": "你好啊，今天是开心的一天",
     "seed": 2028,
     "stream": True,  # 开启流式

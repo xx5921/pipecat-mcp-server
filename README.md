@@ -179,7 +179,7 @@ PIPECAT_STT_PROVIDER=whisper
 PIPECAT_STT_MODEL=medium
 PIPECAT_STT_NO_SPEECH_PROB=0.4
 
-# TTS provider: mimo / kokoro / piper
+# TTS provider: mimo / kokoro / piper / voxcpm
 PIPECAT_TTS_PROVIDER=piper
 # MiMo example: mimo_default / 冰糖 / 茉莉 / 苏打 / 白桦 / Mia / Chloe / Milo / Dean
 # Kokoro example: af_heart
@@ -187,12 +187,19 @@ PIPECAT_TTS_PROVIDER=piper
 PIPECAT_TTS_VOICE=zh_CN-huayan-medium
 # Kokoro af_heart uses en; MiMo/Piper Chinese voices usually use zh.
 PIPECAT_TTS_LANGUAGE=zh
+# VoxCPM server URL (only for voxcpm provider)
+PIPECAT_VOXCPM_URL=http://localhost:8000
+# VoxCPM model name (optional, defaults to openbmb/VoxCPM2)
+PIPECAT_VOXCPM_TTS_MODEL=openbmb/VoxCPM2
+# VoxCPM random seed for reproducible voice (optional, defaults to 2028)
+PIPECAT_VOXCPM_TTS_SEED=2028
 ```
 
 - `mimo`：小米云端服务，中文识别和合成效果较好，需要 `MIMO_API_KEY`。
 - `whisper`：本地 Whisper 语音识别，免费，首次启动会自动下载模型。
 - `kokoro`：本地 Kokoro ONNX 语音合成，免费，首次启动会自动下载模型。
 - `piper`：本地 Piper 语音合成，免费，首次启动会自动下载指定音色模型。
+- `voxcpm`：基于 nanovllm-voxcpm 的高性能 TTS 服务，调用 OpenAI 兼容的 `/v1/audio/speech` 接口，服务端以 48 kHz s16le PCM 流式输出，延迟低。需要先部署 nanovllm-voxcpm 服务，并通过 `PIPECAT_VOXCPM_URL` 指定地址。可选项：`PIPECAT_VOXCPM_TTS_MODEL`（模型名）、`PIPECAT_VOXCPM_TTS_SEED`（音色随机种子，固定种子可复现同一音色）。音色仍由统一的 `PIPECAT_TTS_VOICE` 控制，默认 `default`。
 
 如果切换到 `PIPECAT_TTS_PROVIDER=kokoro` 且使用 `af_heart`，请把 `PIPECAT_TTS_LANGUAGE` 改成 `en`，否则 Kokoro 的 espeak 后端会报 `zh` 不支持。
 
