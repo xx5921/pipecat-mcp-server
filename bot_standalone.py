@@ -49,6 +49,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 )
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
+from pipecat.adapters.schemas.function_schema import FunctionSchema
 from pipecat.services.llm_service import FunctionCallParams
 from pipecat.services.openai.llm import OpenAILLMService
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -164,27 +165,18 @@ async def _load_mcp_tools(server_urls: list[str]) -> list:
 
             for tool in result.tools:
                 # 避免与内置工具重名
-                wrapper_name = f"mcp_{tool.name}" if tool.name in {"get_current_time", "browser_navigate", "browser_screenshot", "search_web"} else tool.name
-                # 构建 docstring：description + 参数列表
-                doc = tool.description or f"MCP 工具: {tool.name}"
+                schema_name = f"mcp_{tool.name}" if tool.name in {"get_current_time"} else tool.name
                 input_schema = tool.inputSchema or {}
                 properties = input_schema.get("properties", {})
                 required = input_schema.get("required", [])
-                if properties:
-                    doc += "\n\nArgs:\n"
-                    for pname, pinfo in properties.items():
-                        ptype = pinfo.get("type", "any")
-                        pdesc = pinfo.get("description", "")
-                        req = " (必填)" if pname in required else ""
-                        doc += f"    {pname}: {ptype}{req}。{pdesc}\n"
+                description = tool.description or ""
 
-                # 用闭包创建 wrapper，捕获 tool.name 和 session
-                async def _make_wrapper(_name: str, _session: ClientSession):
-                    async def wrapper(params: FunctionCallParams):
+                # 构建 handler，用闭包捕获 tool.name 和 session
+                async def _make_handler(_name: str, _session: ClientSession):
+                    async def handler(params: FunctionCallParams):
                         logger.info(f"[MCP] 调用工具: {_name}({dict(params.arguments)})")
                         try:
                             call_result = await _session.call_tool(_name, dict(params.arguments))
-                            # 提取 text content
                             texts = []
                             for block in call_result.content:
                                 if hasattr(block, "text"):
@@ -194,15 +186,18 @@ async def _load_mcp_tools(server_urls: list[str]) -> list:
                         except Exception as e:
                             logger.warning(f"[MCP] 工具调用失败 {_name}: {e}")
                             await params.result_callback({"error": str(e)})
-                    return wrapper
+                    return handler
 
-                wrapper = await _make_wrapper(tool.name, session)
-                wrapper.__name__ = wrapper_name
-                wrapper.__doc__ = doc
-                wrapper.__qualname__ = wrapper_name
-
-                tools.append(wrapper)
-                logger.info(f"[MCP] 已注册工具: {wrapper_name} (来自 {url})")
+                handler = await _make_handler(tool.name, session)
+                schema = FunctionSchema(
+                    name=schema_name,
+                    description=description,
+                    properties=properties,
+                    required=required,
+                    handler=handler,
+                )
+                tools.append(schema)
+                logger.info(f"[MCP] 已注册工具: {schema_name} (来自 {url})")
 
             logger.info(f"[MCP] {url} 加载完成，共 {len(result.tools)} 个工具")
         except Exception as e:
