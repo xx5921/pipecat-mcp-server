@@ -1,0 +1,250 @@
+[
+  {
+    "filename": "voice-preview-1-bingtang.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-1-bingtang.wav",
+    "category": "预置音色",
+    "voice_name": "冰糖",
+    "instruct": "",
+    "text": "预置音色「冰糖」演示语音"
+  },
+  {
+    "filename": "voice-preview-2-moli.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-2-moli.wav",
+    "category": "预置音色",
+    "voice_name": "茉莉",
+    "instruct": "",
+    "text": "预置音色「茉莉」演示语音"
+  },
+  {
+    "filename": "voice-preview-3-suda.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-3-suda.wav",
+    "category": "预置音色",
+    "voice_name": "苏打",
+    "instruct": "",
+    "text": "预置音色「苏打」演示语音"
+  },
+  {
+    "filename": "voice-preview-4-baihua.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-4-baihua.wav",
+    "category": "预置音色",
+    "voice_name": "白桦",
+    "instruct": "",
+    "text": "预置音色「白桦」演示语音"
+  },
+  {
+    "filename": "voice-preview-5-mia.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-5-mia.wav",
+    "category": "预置音色",
+    "voice_name": "Mia",
+    "instruct": "",
+    "text": "预置音色「Mia」演示语音"
+  },
+  {
+    "filename": "voice-preview-6-chloe.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-6-chloe.wav",
+    "category": "预置音色",
+    "voice_name": "Chloe",
+    "instruct": "",
+    "text": "预置音色「Chloe」演示语音"
+  },
+  {
+    "filename": "voice-preview-7-milo.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-7-milo.wav",
+    "category": "预置音色",
+    "voice_name": "Milo",
+    "instruct": "",
+    "text": "预置音色「Milo」演示语音"
+  },
+  {
+    "filename": "voice-preview-8-dean.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-preview-8-dean.wav",
+    "category": "预置音色",
+    "voice_name": "Dean",
+    "instruct": "",
+    "text": "预置音色「Dean」演示语音"
+  },
+  {
+    "filename": "core-capability-1.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/core-capability-1.wav",
+    "category": "核心能力演示 - 风格指令",
+    "voice_name": "",
+    "instruct": "声音低沉沙哑一点，像个历经沧桑的老前辈在讲述传奇人物。语气里带点由衷的敬佩，娓娓道来。",
+    "text": "街口那个老周啊，媳妇走得早，一个人拉扯俩娃，白天蹬三轮，晚上还去夜市摆摊修鞋。现在俩孩子都有出息喽，想接他去城里享福——他不去，就守着那间小铺子。哎，人哪，骨头硬，心里头就踏实。"
+  },
+  {
+    "filename": "core-capability-2.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/core-capability-2.wav",
+    "category": "核心能力演示 - 结构化剧本",
+    "voice_name": "",
+    "instruct": "角色：曾是守护九天的神祇，决定以灭世完成净化。场景：悬浮于崩塌祭坛之上，俯视火海中哀嚎的信徒。指导：充分打开胸腔共鸣，制造神圣回音感；声音位置靠后，音色如古钟般低沉；四声下落平缓，吟诵古籍般的从容；字句间停顿拉长；在'闭上眼吧'时混入疲惫气息。",
+    "text": "你们求我垂怜，求我降下甘霖洗净这浊世。可这世间的沉疴，唯有烈火能剔骨刮毒。闭上眼吧。这业火烧起来的时候，一点也不疼。"
+  },
+  {
+    "filename": "core-capability-3.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/core-capability-3.wav",
+    "category": "核心能力演示 - 内联标签(电竞指挥)",
+    "voice_name": "",
+    "instruct": "Character: The grizzled, veteran shot-caller of a professional esports team. Scene: Match point in the grand finals. 2-on-1 clutch situation. Direction: Microphone-close, intensely compressed, and raspy. Speak in rapid, staccato bursts. Drive pitch down into gritty vocal fry.",
+    "text": "Smoke catwalk and drop. Don't peek it, don't peek it! He's holding the angle with a heavy, just jiggle and bait the shot. There goes the reload. Swing him! Nice, now freeze. One left, the objective is dropped, we have the clock."
+  },
+  {
+    "filename": "core-capability-4.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/core-capability-4.wav",
+    "category": "核心能力演示 - 零提示词文本理解",
+    "voice_name": "",
+    "instruct": "（无风格提示，模型从文本中自动捕捉广告播报语气）",
+    "text": "The VortexBlend Pro is the ultimate kitchen companion trusted by home chefs everywhere. With one-touch smoothie presets, ice-crushing titanium blades, whisper-quiet motor technology and self-cleaning cycles, it handles everything from morning shakes to nut butters. Order today and get free overnight shipping plus a lifetime warranty."
+  },
+  {
+    "filename": "audio-tag-control-1.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/audio-tag-control-1.wav",
+    "category": "内联标签控制",
+    "voice_name": "",
+    "instruct": "",
+    "text": "[crying] She's gone... she's really gone...[pause] but you know what's funny? [sniffles] She always said she'd outlive us all. [crying] God, I miss her so much."
+  },
+  {
+    "filename": "audio-tag-control-2.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/audio-tag-control-2.wav",
+    "category": "内联标签控制",
+    "voice_name": "",
+    "instruct": "",
+    "text": "Order! Order in the court! [sternly] The defendant will rise. [clears throat] [commanding] How do you plead? [trembling] N-not guilty, Your Honor. [Angry] Silence! [sighs] [wearily] Very well. Let the record show..."
+  },
+  {
+    "filename": "audio-tag-control-3.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/audio-tag-control-3.wav",
+    "category": "内联标签控制",
+    "voice_name": "",
+    "instruct": "",
+    "text": "(调侃) 老张你当时不是说这条航线稳得很吗……(模仿自信，提高音量) \"系统全绿，放心走。\"(突然停顿) ……现在呢？(爆发，愤怒压不住) 现在整艘船都在报警！你管这叫\"放心\"？！"
+  },
+  {
+    "filename": "audio-tag-control-4.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/audio-tag-control-4.wav",
+    "category": "内联标签控制",
+    "voice_name": "",
+    "instruct": "",
+    "text": "上！上！上！他没血了！打他打他打他——[吸气]进塔了！他进塔了！[停顿]等等等等，有人绕后 [停顿][大叫]啊！！[急促]一换二！一换二！兄弟们看到了吗？！这就是今晚的 M——V——P！"
+  },
+  {
+    "filename": "text-understanding-1.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/text-understanding-1.wav",
+    "category": "文本理解 - 火箭发射倒计时",
+    "voice_name": "",
+    "instruct": "（无风格提示，模型从文本中自动捕捉发射倒计时紧张氛围）",
+    "text": "Ten... nine... eight... seven... six... five... four... three... TWO... ONE... ZERO! LAUNCH! LAUNCH! WE HAVE LIFTOFF! GO GO GO!"
+  },
+  {
+    "filename": "text-understanding-2.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/text-understanding-2.wav",
+    "category": "文本理解 - 多角色对话",
+    "voice_name": "",
+    "instruct": "（无风格提示，模型自动区分五个角色：5岁小孩/老人/青少年/警察/小男孩）",
+    "text": "The five-year-old squealed, \"Look, Grandpa! A PUPPY!\" The old man squinted and grumbled, \"That ain't a puppy, that's a raccoon.\" The teenager rolled her eyes: \"It's OBVIOUSLY a cat, you're both blind.\" The police officer stepped forward: \"Ma'am, sir, I'm going to need everyone to step back slowly.\" The little boy whimpered, \"Is it gonna bite me?\""
+  },
+  {
+    "filename": "voice-design-1-heavy-russian-accent.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-design-1-heavy-russian-accent.wav",
+    "category": "音色设计 (VoiceDesign)",
+    "voice_name": "",
+    "instruct": "Heavy Russian accent, gruff middle-aged male, blunt and matter-of-fact.",
+    "text": "You want my opinion? Fine. This plan will not work. I have seen many plan like this before, all fail. You think you are clever, but clever does not stop bullet."
+  },
+  {
+    "filename": "voice-design-2-young-female-extreme-closeup.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-design-2-young-female-extreme-closeup.wav",
+    "category": "音色设计 (VoiceDesign)",
+    "voice_name": "",
+    "instruct": "Young female, extreme close-up with a binaural, ear-to-ear ASMR feel. Audible breathing, subtle swallowing, and soft natural lip sounds. She speaks very slowly, creating a deeply relaxing and immersive experience.",
+    "text": "[Whispering in your ear] Shhh... just relax, come a little closer. Can you feel that? It's just my breath."
+  },
+  {
+    "filename": "voice-design-3-documentary.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-design-3-documentary.wav",
+    "category": "音色设计 (VoiceDesign)",
+    "voice_name": "",
+    "instruct": "一位年迈的老先生，说带北方口音的普通话，语速缓慢而沉稳，嗓音略带沙哑和沧桑感，仿佛一位饱经风霜的老爷爷在讲故事，充满岁月的智慧。",
+    "text": "我这辈子啊，走南闯北六十多年。见过最热闹的集市，也见过最安静的戈壁。到头来才明白一个道理——这人哪，不在走了多远的路，在于记住了多少风景。年轻人，别光顾着赶路，偶尔也停下来看看天。"
+  },
+  {
+    "filename": "voice-design-4-elderly.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-design-4-elderly.wav",
+    "category": "音色设计 (VoiceDesign)",
+    "voice_name": "",
+    "instruct": "一位中年男性，说标准普通话，嗓音低沉有磁性，带有轻微的沙哑质感，像纪录片旁白解说员，沉稳而有感染力。",
+    "text": "当最后一缕阳光消失在地平线之下，这片沉睡了亿万年的大地开始显露它真正的面貌。在这寂静的荒野中，每一块岩石都记录着时间的流逝，每一阵风都在诉说着古老的故事。"
+  },
+  {
+    "filename": "voice-clone-1-prompt.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-1-prompt.wav",
+    "category": "音色克隆 - 参考音频",
+    "voice_name": "",
+    "instruct": "",
+    "text": "风轻轻地吹过，带来了远方的花香，和记忆里那个夏天的味道。"
+  },
+  {
+    "filename": "voice-clone-2-prompt.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-2-prompt.wav",
+    "category": "音色克隆 - 参考音频",
+    "voice_name": "",
+    "instruct": "",
+    "text": "Ignore the sirens, ignore the neon bleeding through your eyelids, and just breathe with me. In, and out."
+  },
+  {
+    "filename": "voice-clone-3-prompt.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-3-prompt.wav",
+    "category": "音色克隆 - 参考音频",
+    "voice_name": "",
+    "instruct": "",
+    "text": "They sit up there in their glass towers, thinking they've engineered peace out of algorithms and sterile air. But true stillness isn't manufactured, little bird."
+  },
+  {
+    "filename": "voice-clone-4-prompt.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-4-prompt.wav",
+    "category": "音色克隆 - 参考音频",
+    "voice_name": "",
+    "instruct": "",
+    "text": "No shape, no urgency, no clue what they're trying to do out there. The Ironhawks were top of the league six weeks ago."
+  },
+  {
+    "filename": "voice-clone-1-output.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-1-output.wav",
+    "category": "音色克隆 - 合成结果",
+    "voice_name": "",
+    "instruct": "用尖锐刻薄的嗓音，带着狐假虎威的得意感说话，在提到大人物的身份时故意放慢语速并加重语气，营造压迫感。",
+    "text": "你以为我是谁，也敢在这儿跟我耍横？我告诉你，站在我身后的那个人，说出来吓死你——是当今的——万岁爷！你今天要是不给我个说法，我让你这铺子明天就开不了门。"
+  },
+  {
+    "filename": "voice-clone-2-output.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-2-output.wav",
+    "category": "音色克隆 - 合成结果",
+    "voice_name": "",
+    "instruct": "Broadcast this like a blistering post-match pundit tearing into a disastrous performance. Voice is fast and openly fed up.",
+    "text": "No shape, no urgency, no clue what they're trying to do out there. The Ironhawks were top of the league six weeks ago—SIX WEEKS—and now they can't string two passes together without handing it back."
+  },
+  {
+    "filename": "voice-clone-3-output.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-3-output.wav",
+    "category": "音色克隆 - 合成结果",
+    "voice_name": "",
+    "instruct": "Broadcast this like a blistering post-match pundit tearing into a disastrous performance. Voice is fast and openly fed up, smashing down on loaded words.",
+    "text": "No shape, no urgency, no clue what they're trying to do out there. The Ironhawks were top of the league six weeks ago—SIX WEEKS—and now they can't string two passes together without handing it back."
+  },
+  {
+    "filename": "voice-clone-4-output.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/voice-clone-4-output.wav",
+    "category": "音色克隆 - 合成结果",
+    "voice_name": "",
+    "instruct": "Broadcast this like a blistering post-match pundit. Voice is fast and openly fed up, smashing down on loaded words.",
+    "text": "No shape, no urgency, no clue what they're trying to do out there. The Ironhawks were top of the league six weeks ago—SIX WEEKS—and now they can't string two passes together."
+  },
+  {
+    "filename": "agent-wav.wav",
+    "url": "https://aistudio-cdn.xiaomimimo.com/xiaomimimo-static/blog/tts-2-5/agent-wav.wav",
+    "category": "Agent 演示",
+    "voice_name": "",
+    "instruct": "Broadcast this like a blistering post-match pundit tearing into a disastrous performance. Voice is fast and openly fed up, smashing down on loaded words to drive home how badly things fell apart.",
+    "text": "Ignore the sirens, ignore the neon bleeding through your eyelids, and just breathe with me. In, and out. They sit up there in their glass towers, thinking they've engineered peace out of algorithms and sterile air. But true stillness isn't manufactured, little bird."
+  }
+]

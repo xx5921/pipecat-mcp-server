@@ -6,7 +6,7 @@ import pyaudio
 
 # 1. 配置参数（完全对齐官方 48 kHz s16le 标准）
 MODEL_NAME = "openbmb/VoxCPM2"
-URL = "http://100.84.59.58:8100/v1/audio/speech"
+URL = "http://47.113.220.254:7100/v1/audio/speech"
 
 FORMAT = pyaudio.paInt16  # s16le (16位有符号整数)
 CHANNELS = 1  # -c 1 (单声道)

@@ -67,6 +67,7 @@ from pipecat_mcp_server.processors.mimo_tts import MiMoTTSService
 from pipecat_mcp_server.processors.screen_capture import ScreenCaptureProcessor
 from pipecat_mcp_server.processors.vision import VisionProcessor
 from pipecat_mcp_server.processors.voxcpm_tts import VoxCPMTTSService
+from zhconv import convert as zh_convert
 
 load_dotenv(override=True)
 
@@ -278,7 +279,7 @@ class PipecatMCPAgent:
             if not message.content:
                 return
 
-            text = message.content
+            text = zh_convert(message.content, "zh-cn")
 
             if not self._awake and self._wake_words:
                 # Sleeping: check for wake word
