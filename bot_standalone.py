@@ -101,8 +101,7 @@ GREETINGS = [
 SYSTEM_PROMPT = (
     "你是一个友好的中文语音助手。请用简洁、自然的口语回答用户的问题。"
     "回答尽量控制在 2-3 句话内，不要使用 markdown 格式。"
-    "你可以使用工具函数来获取实时信息。内置工具包括：搜索网络、获取当前时间。"
-    "如果配置了 MCP 服务，你还会有浏览器工具可用（打开网页、截图、点击、输入等）。"
+    "如果配置了 MCP 服务，你会有浏览器工具可用（打开网页、截图、搜索、点击、输入等）。"
     "调用工具时请使用正确的工具名称。"
     "当用户询问需要最新信息的问题时，主动调用相应的工具。"
     "工具返回的网页内容如果太长，请提炼出用户最关心的要点进行回答。"
@@ -122,54 +121,6 @@ async def tool_get_current_time(params: FunctionCallParams):
         "datetime": now.strftime("%Y年%m月%d日 %H:%M:%S"),
         "weekday": ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][now.weekday()],
     })
-
-
-async def tool_search_web(params: FunctionCallParams):
-    """搜索网页并返回结果摘要。
-
-    Args:
-        query: 搜索关键词。
-    """
-    query = params.arguments.get("query", "")
-    if not query:
-        await params.result_callback({"error": "未提供搜索关键词"})
-        return
-
-    logger.info(f"[工具] 网页搜索: {query}")
-    try:
-        import urllib.parse
-        search_url = f"https://html.duckduckgo.com/html/?q={urllib.parse.quote(query)}"
-
-        async with httpx.AsyncClient(timeout=15.0, follow_redirects=True) as client:
-            resp = await client.get(
-                search_url,
-                headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-            )
-            resp.raise_for_status()
-            html_text = resp.text
-
-        import re
-        results = []
-        for m in re.finditer(
-            r'<a[^>]*class="result__a"[^>]*href="([^"]*)"[^>]*>(.*?)</a>.*?<a[^>]*class="result__snippet"[^>]*>(.*?)</a>',
-            html_text,
-            re.DOTALL | re.IGNORECASE,
-        ):
-            link = m.group(1)
-            title = re.sub(r"<[^>]+>", "", m.group(2)).strip()
-            snippet = re.sub(r"<[^>]+>", "", m.group(3)).strip()
-            if title and link.startswith("http"):
-                results.append({"title": unescape(title), "url": link, "snippet": unescape(snippet)})
-            if len(results) >= 5:
-                break
-
-        if not results:
-            await params.result_callback({"query": query, "results": [], "message": "未找到相关结果"})
-        else:
-            await params.result_callback({"query": query, "results": results})
-    except Exception as e:
-        logger.warning(f"[工具] 搜索失败: {e}")
-        await params.result_callback({"error": f"搜索失败: {e}"})
 
 
 # MCP 会话管理器（bot 停止时清理）
@@ -283,10 +234,7 @@ async def _cleanup_mcp():
 
 
 # 工具列表
-BOT_TOOLS = [
-    tool_get_current_time,
-    tool_search_web,
-]
+BOT_TOOLS = [tool_get_current_time]
 
 _PUNCT_RE = re.compile(r"[]\s，。！？、；：""''（）《》【】,.!?;:\"'(){}[]+")
 
