@@ -58,6 +58,9 @@ import httpx
 from datetime import datetime, timezone, timedelta
 from html import unescape
 
+from mcp import ClientSession
+from mcp.client.streamable_http import streamable_http_client
+
 from pipecat_mcp_server.agent import _load_audio_data_uri
 from pipecat_mcp_server.processors.mimo_stt import MiMoSTTService
 from pipecat_mcp_server.processors.mimo_tts import MiMoTTSService
@@ -83,6 +86,7 @@ DEFAULT_MIMO_TTS_LANGUAGE = "zh"
 DEFAULT_KOKORO_TTS_LANGUAGE = "en"
 DEFAULT_LLM_BASE_URL = "https://token-plan-cn.xiaomimimo.com/v1"
 DEFAULT_LLM_MODEL = "mimo-v2.5"
+DEFAULT_MCP_SERVERS = ""
 
 # 唤醒后随机问候语列表
 GREETINGS = [
@@ -97,7 +101,9 @@ GREETINGS = [
 SYSTEM_PROMPT = (
     "你是一个友好的中文语音助手。请用简洁、自然的口语回答用户的问题。"
     "回答尽量控制在 2-3 句话内，不要使用 markdown 格式。"
-    "你可以使用工具函数来获取实时信息，包括：用浏览器打开网页、截图保存、搜索网络、获取当前时间。"
+    "你可以使用工具函数来获取实时信息。内置工具包括：搜索网络、获取当前时间。"
+    "如果配置了 MCP 服务，你还会有浏览器工具可用（打开网页、截图、点击、输入等）。"
+    "调用工具时请使用正确的工具名称。"
     "当用户询问需要最新信息的问题时，主动调用相应的工具。"
     "工具返回的网页内容如果太长，请提炼出用户最关心的要点进行回答。"
 )
@@ -107,24 +113,6 @@ SYSTEM_PROMPT = (
 # ---------------------------------------------------------------------------
 
 _tz_cn = timezone(timedelta(hours=8))
-_browser: "Browser | None" = None
-_browser_page: "Page | None" = None
-
-
-async def _get_browser():
-    """获取或创建全局 Playwright 浏览器实例。"""
-    global _browser, _browser_page
-    if _browser is None:
-        from playwright.async_api import async_playwright
-        _pw = await async_playwright().start()
-        _browser = await _pw.chromium.launch(headless=True)
-        context = await _browser.new_context(
-            viewport={"width": 1280, "height": 720},
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36"
-        )
-        _browser_page = await context.new_page()
-        logger.info("[工具] Playwright 浏览器已启动")
-    return _browser_page
 
 
 async def tool_get_current_time(params: FunctionCallParams):
@@ -134,67 +122,6 @@ async def tool_get_current_time(params: FunctionCallParams):
         "datetime": now.strftime("%Y年%m月%d日 %H:%M:%S"),
         "weekday": ["星期一", "星期二", "星期三", "星期四", "星期五", "星期六", "星期日"][now.weekday()],
     })
-
-
-async def tool_browser_navigate(params: FunctionCallParams):
-    """用真实浏览器打开网页，获取渲染后的页面内容（支持 SPA 网站）。
-
-    获取的页面文本会自动截取前 3000 字符。
-    随后可以用 tool_browser_screenshot 截图查看页面。
-
-    Args:
-        url: 要打开的网页 URL。
-    """
-    url = params.arguments.get("url", "")
-    if not url:
-        await params.result_callback({"error": "未提供 URL"})
-        return
-
-    logger.info(f"[工具] 浏览器导航: {url}")
-    try:
-        page = await _get_browser()
-        await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-        title = await page.title()
-        body = await page.evaluate("document.body.innerText")
-        body = body[:3000] + "..." if len(body) > 3000 else body
-        await params.result_callback({"title": title, "content": body, "url": url})
-    except Exception as e:
-        logger.warning(f"[工具] 浏览器导航失败: {e}")
-        await params.result_callback({"error": f"无法访问该网页: {e}"})
-
-
-async def tool_browser_screenshot(params: FunctionCallParams):
-    """对当前浏览器页面截图并保存为 PNG 文件。
-
-    截图保存在 voice_samples 目录下。
-    需要先调用 tool_browser_navigate 打开一个页面。
-
-    Args:
-        selector: 可选，CSS 选择器，只截取指定元素区域。
-    """
-    try:
-        page = await _get_browser()
-        import os
-        output_dir = os.path.join(os.path.dirname(__file__), "voice_samples")
-        os.makedirs(output_dir, exist_ok=True)
-        filepath = os.path.join(output_dir, "screenshot.png")
-
-        selector = params.arguments.get("selector", "")
-        if selector:
-            element = await page.query_selector(selector)
-            if element:
-                await element.screenshot(path=filepath)
-            else:
-                await params.result_callback({"error": f"未找到元素: {selector}"})
-                return
-        else:
-            await page.screenshot(path=filepath, full_page=False)
-
-        logger.info(f"[工具] 截图已保存: {filepath}")
-        await params.result_callback({"path": filepath, "ok": True})
-    except Exception as e:
-        logger.warning(f"[工具] 截图失败: {e}")
-        await params.result_callback({"error": f"截图失败: {e}"})
 
 
 async def tool_search_web(params: FunctionCallParams):
@@ -245,11 +172,119 @@ async def tool_search_web(params: FunctionCallParams):
         await params.result_callback({"error": f"搜索失败: {e}"})
 
 
+# MCP 会话管理器（bot 停止时清理）
+_mcp_sessions: list[ClientSession] = []
+_mcp_transports: list = []
+_mcp_http_clients: list[httpx.AsyncClient] = []
+
+
+async def _load_mcp_tools(server_urls: list[str]) -> list:
+    """连接 MCP 服务器并动态注册其提供的工具。
+
+    通过 MCP Streamable HTTP 协议连接每个 MCP 服务器，
+    调用 tools/list 获取可用工具列表，
+    为每个工具生成一个 Pipecat FunctionCallParams 兼容的 wrapper 函数。
+
+    Args:
+        server_urls: MCP 服务器端点列表，例如 ['http://localhost:9091/mcp']。
+
+    Returns:
+        Pipecat DirectFunction 工具函数列表。
+    """
+    tools = []
+    http_client = httpx.AsyncClient(trust_env=False, timeout=30.0)
+    _mcp_http_clients.append(http_client)
+    for url in server_urls:
+        url = url.strip()
+        if not url:
+            continue
+        logger.info(f"[MCP] 正在连接 MCP 服务: {url}")
+        try:
+            transport_ctx = streamable_http_client(url, http_client=http_client)
+            read, write, _ = await transport_ctx.__aenter__()
+            _mcp_transports.append(transport_ctx)
+
+            session = ClientSession(read, write)
+            await session.__aenter__()
+            _mcp_sessions.append(session)
+
+            await session.initialize()
+            result = await session.list_tools()
+
+            for tool in result.tools:
+                # 避免与内置工具重名
+                wrapper_name = f"mcp_{tool.name}" if tool.name in {"get_current_time", "browser_navigate", "browser_screenshot", "search_web"} else tool.name
+                # 构建 docstring：description + 参数列表
+                doc = tool.description or f"MCP 工具: {tool.name}"
+                input_schema = tool.inputSchema or {}
+                properties = input_schema.get("properties", {})
+                required = input_schema.get("required", [])
+                if properties:
+                    doc += "\n\nArgs:\n"
+                    for pname, pinfo in properties.items():
+                        ptype = pinfo.get("type", "any")
+                        pdesc = pinfo.get("description", "")
+                        req = " (必填)" if pname in required else ""
+                        doc += f"    {pname}: {ptype}{req}。{pdesc}\n"
+
+                # 用闭包创建 wrapper，捕获 tool.name 和 session
+                async def _make_wrapper(_name: str, _session: ClientSession):
+                    async def wrapper(params: FunctionCallParams):
+                        logger.info(f"[MCP] 调用工具: {_name}({dict(params.arguments)})")
+                        try:
+                            call_result = await _session.call_tool(_name, dict(params.arguments))
+                            # 提取 text content
+                            texts = []
+                            for block in call_result.content:
+                                if hasattr(block, "text"):
+                                    texts.append(block.text)
+                            result_text = "\n".join(texts) if texts else str(call_result.content)
+                            await params.result_callback({"result": result_text})
+                        except Exception as e:
+                            logger.warning(f"[MCP] 工具调用失败 {_name}: {e}")
+                            await params.result_callback({"error": str(e)})
+                    return wrapper
+
+                wrapper = await _make_wrapper(tool.name, session)
+                wrapper.__name__ = wrapper_name
+                wrapper.__doc__ = doc
+                wrapper.__qualname__ = wrapper_name
+
+                tools.append(wrapper)
+                logger.info(f"[MCP] 已注册工具: {wrapper_name} (来自 {url})")
+
+            logger.info(f"[MCP] {url} 加载完成，共 {len(result.tools)} 个工具")
+        except Exception as e:
+            logger.warning(f"[MCP] 连接失败 {url}: {e}")
+
+    return tools
+
+
+async def _cleanup_mcp():
+    """关闭所有 MCP 客户端会话。"""
+    for session in _mcp_sessions:
+        try:
+            await session.__aexit__(None, None, None)
+        except Exception:
+            pass
+    _mcp_sessions.clear()
+    for transport in _mcp_transports:
+        try:
+            await transport.__aexit__(None, None, None)
+        except Exception:
+            pass
+    _mcp_transports.clear()
+    for client in _mcp_http_clients:
+        try:
+            await client.aclose()
+        except Exception:
+            pass
+    _mcp_http_clients.clear()
+
+
 # 工具列表
 BOT_TOOLS = [
     tool_get_current_time,
-    tool_browser_navigate,
-    tool_browser_screenshot,
     tool_search_web,
 ]
 
@@ -418,12 +453,20 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
             awake_timeout_task.cancel()
             awake_timeout_task = None
 
+    # 加载 MCP 工具
+    mcp_server_urls = [
+        u.strip() for u in os.environ.get("PIPECAT_MCP_SERVERS", DEFAULT_MCP_SERVERS).split(",") if u.strip()
+    ]
+    mcp_tools = await _load_mcp_tools(mcp_server_urls)
+    all_tools = BOT_TOOLS + mcp_tools
+    logger.info(f"总共注册 {len(all_tools)} 个工具（内置 {len(BOT_TOOLS)} + MCP {len(mcp_tools)}）")
+
     # 创建服务
     stt = _create_stt_service()
     tts = _create_tts_service()
     llm = _create_llm_service()
 
-    context = LLMContext(tools=BOT_TOOLS)
+    context = LLMContext(tools=all_tools)
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
@@ -522,6 +565,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     # 清理
     cancel_awake_timeout()
+    await _cleanup_mcp()
 
 
 async def bot(runner_args: RunnerArguments):
