@@ -460,7 +460,12 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(
         context,
         user_params=LLMUserAggregatorParams(
-            vad_analyzer=SileroVADAnalyzer(params=VADParams(stop_secs=0.2)),
+            vad_analyzer=SileroVADAnalyzer(params=VADParams(
+                confidence=0.7,
+                start_secs=0.2,
+                stop_secs=0.2,
+                min_volume=0.6,
+            )),
         ),
     )
 

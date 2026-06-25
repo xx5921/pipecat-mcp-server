@@ -12,6 +12,7 @@ from loguru import logger
 from openai import AsyncOpenAI
 
 from pipecat.frames.frames import ErrorFrame, Frame, TranscriptionFrame
+from pipecat.services.settings import STTSettings
 from pipecat.services.stt_service import SegmentedSTTService
 from pipecat.transcriptions.language import Language
 from pipecat.utils.time import time_now_iso8601
@@ -36,6 +37,7 @@ class QwenSTTService(SegmentedSTTService):
         language: str = "zh",
         base_url: str = QWEN_DEFAULT_BASE_URL,
         timeout: float = 30.0,
+        ttfs_p99_latency: float = 2.0,
         **kwargs,
     ):
         """初始化 Qwen3-ASR 服务。
@@ -46,8 +48,10 @@ class QwenSTTService(SegmentedSTTService):
             language: 识别语言代码，默认 zh。
             base_url: Qwen3-ASR 服务地址。
             timeout: 请求超时时间。
+            ttfs_p99_latency: P99 语音结束到最终转写延迟（秒）。
         """
-        super().__init__(**kwargs)
+        settings = STTSettings(model=model, language=language)
+        super().__init__(settings=settings, ttfs_p99_latency=ttfs_p99_latency, **kwargs)
         self._model = model
         self._language = language
         self._client = AsyncOpenAI(

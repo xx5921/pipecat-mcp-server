@@ -80,7 +80,7 @@ class VoxCPMTTSService(TTSService):
             settings: 运行时可更新的设置。
             **kwargs: 传递给父类 TTSService 的额外参数。
         """
-        default_settings = self.Settings(voice=voice, seed=seed)
+        default_settings = self.Settings(voice=voice, seed=seed, model=model, language=None)
         if settings is not None:
             default_settings.apply_update(settings)
 
