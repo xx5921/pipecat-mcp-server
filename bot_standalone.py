@@ -16,8 +16,13 @@
 环境变量配置（.env）：
 
 - MIMO_API_KEY: MiMo API 密钥
-- PIPECAT_STT_PROVIDER: STT 服务商（mimo / whisper，默认 mimo）
-- PIPECAT_STT_MODEL: Whisper 模型名（tiny / base / small / medium / large-v3）
+- PIPECAT_STT_PROVIDER: STT 服务商（mimo / whisper / qwen，默认 mimo）
+- PIPECAT_STT_MODEL: Whisper 模型名（tiny / base / small / medium / large-v3，默认 medium）
+- PIPECAT_STT_DEVICE: Whisper 推理设备（cuda / cpu / auto，默认 cuda）
+- PIPECAT_STT_COMPUTE_TYPE: Whisper 计算精度（float16 / int8_float16 / default，默认 float16）
+- PIPECAT_STT_NO_SPEECH_PROB: 非语音概率阈值（默认 0.4）
+- PIPECAT_QWEN_STT_BASE_URL: Qwen3-ASR 服务地址（默认 http://100.84.59.58:8200/v1）
+- PIPECAT_QWEN_STT_MODEL: Qwen3-ASR 模型名（默认 Qwen/Qwen3-ASR-1.7B）
 - PIPECAT_TTS_PROVIDER: TTS 服务商（mimo / kokoro / piper / voxcpm，默认 mimo）
 - PIPECAT_TTS_VOICE: TTS 音色
 - PIPECAT_TTS_LANGUAGE: TTS 语言代码
@@ -65,6 +70,7 @@ from mcp.client.streamable_http import streamable_http_client
 from pipecat_mcp_server.agent import _load_audio_data_uri
 from pipecat_mcp_server.processors.mimo_stt import MiMoSTTService
 from pipecat_mcp_server.processors.mimo_tts import MiMoTTSService
+from pipecat_mcp_server.processors.qwen_stt import QwenSTTService
 from pipecat_mcp_server.processors.voxcpm_tts import VoxCPMTTSService
 from zhconv import convert as zh_convert
 
@@ -75,6 +81,10 @@ load_dotenv(override=True)
 # ---------------------------------------------------------------------------
 DEFAULT_STT_PROVIDER = "mimo"
 DEFAULT_STT_MODEL = "medium"
+DEFAULT_STT_DEVICE = "cuda"
+DEFAULT_STT_COMPUTE_TYPE = "float16"
+DEFAULT_QWEN_STT_BASE_URL = "http://100.84.59.58:8200/v1"
+DEFAULT_QWEN_STT_MODEL = "Qwen/Qwen3-ASR-1.7B"
 DEFAULT_TTS_PROVIDER = "mimo"
 DEFAULT_MIMO_TTS_VOICE = "mimo_default"
 DEFAULT_KOKORO_TTS_VOICE = "af_heart"
@@ -100,7 +110,7 @@ GREETINGS = [
 
 # LLM 系统提示词
 SYSTEM_PROMPT = (
-    "你是一个友好的中文语音助手。请用简洁、自然的口语回答用户的问题。"
+    "你是一个友好的中文语音助手，你叫冰糖。请用简洁、自然的口语回答用户的问题。"
     "回答尽量控制在 2-3 句话内，不要使用 markdown 格式。"
     "如果配置了 MCP 服务，你会有浏览器工具可用（打开网页、截图、搜索、点击、输入等）。"
     "调用工具时请使用正确的工具名称。"
@@ -248,6 +258,36 @@ def _find_wake_word(text: str, wake_words: list[str]) -> str | None:
     return None
 
 
+def _merge_tail_user_messages(context):
+    """合并 context 尾部连续的多条 user 消息为一条。
+
+    VAD 将长句切割成多个小段，每段生成一条 {"role": "user"} 消息。
+    此函数将尾部连续的 user 消息合并，避免 LLM 上下文碎片化。
+
+    Args:
+        context: LLMContext 实例。
+    """
+    messages = context.messages
+    if len(messages) < 2:
+        return
+
+    # 从尾部扫描，找到连续 user 消息的起始位置
+    tail_start = None
+    for i in range(len(messages) - 1, -1, -1):
+        if messages[i].get("role") != "user":
+            tail_start = i + 1
+            break
+    if tail_start is None:
+        tail_start = 0
+
+    user_msgs = messages[tail_start:]
+    if len(user_msgs) <= 1:
+        return
+
+    merged_content = " ".join(m.get("content", "") for m in user_msgs)
+    context.set_messages(messages[:tail_start] + [{"role": "user", "content": merged_content}])
+
+
 def _create_stt_service():
     """根据环境变量创建语音识别服务。
 
@@ -274,6 +314,13 @@ def _create_stt_service():
                 language=Language.ZH,
                 no_speech_prob=float(os.environ.get("PIPECAT_STT_NO_SPEECH_PROB", "0.4")),
             ),
+        )
+
+    if provider == "qwen":
+        return QwenSTTService(
+            base_url=os.environ.get("PIPECAT_QWEN_STT_BASE_URL", DEFAULT_QWEN_STT_BASE_URL),
+            model=os.environ.get("PIPECAT_QWEN_STT_MODEL", DEFAULT_QWEN_STT_MODEL),
+            language="zh",
         )
 
     raise ValueError(f"不支持的 STT provider: {provider}")
@@ -323,8 +370,8 @@ def _create_tts_service():
             base_url=os.environ.get("PIPECAT_VOXCPM_URL", DEFAULT_VOXCPM_TTS_URL),
             model=DEFAULT_VOXCPM_TTS_MODEL,
             voice=DEFAULT_VOXCPM_TTS_VOICE,
-            ref_audio=_load_audio_data_uri(r"voice_samples/core-capability-1.wav"),
-            ref_text="街口那个老周啊，媳妇走得早，一个人拉扯俩娃，白天蹬三轮，晚上还去夜市摆摊修鞋。现在俩孩子都有出息喽，想接他去城里享福——他不去，就守着那间小铺子。哎，人哪，骨头硬，心里头就踏实。",
+            ref_audio=_load_audio_data_uri(r"voice_samples/voice-preview-1-bingtang.wav"),
+            ref_text="你好呀，我是冰糖，刚刚路过一家小店，闻到面包的味道，突然觉得好幸福呀",
             seed=DEFAULT_VOXCPM_TTS_SEED,
         )
 
