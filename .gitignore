@@ -40,3 +40,9 @@ MANIFEST
 
 # Pipecat
 whisker_setup.py
+
+# 运行时记忆数据（root 级 memory/ 目录，非 src 下的代码包）
+/memory/
+
+# Playwright MCP 工具缓存
+.playwright-mcp/

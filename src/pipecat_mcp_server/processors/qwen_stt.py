@@ -6,6 +6,7 @@
 
 import io
 import os
+import re
 from collections.abc import AsyncGenerator
 
 from loguru import logger
@@ -19,6 +20,10 @@ from pipecat.utils.time import time_now_iso8601
 
 QWEN_DEFAULT_BASE_URL = "http://100.84.59.58:8200/v1"
 QWEN_DEFAULT_MODEL = "qwen3-asr"
+
+# Qwen3-ASR 返回的文本会带语言标签前缀，如 "language Chinese<asr_text>实际内容"
+# 这个正则用于去除前缀，避免污染下游 LLM context 和记忆模块
+_ASR_LANG_TAG_RE = re.compile(r"language\s+\w+<asr_text>\s*")
 
 
 class QwenSTTService(SegmentedSTTService):
@@ -86,6 +91,8 @@ class QwenSTTService(SegmentedSTTService):
             )
 
             text = (transcription.text or "").strip()
+            # Qwen3-ASR 会加语言标签前缀（如 "language Chinese<asr_text>"），需去除
+            text = _ASR_LANG_TAG_RE.sub("", text).strip()
             lang = Language.ZH if self._language == "zh" else Language.EN
 
             if text:
